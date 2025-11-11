@@ -1,7 +1,40 @@
-# Skills
+###### !/usr/bin/env -S uv run -s
+
+/// script
+requires-python = ">=3.8"
+dependencies = ["python-frontmatter","pyyaml"]
+///
+import os, sys, json
+from pathlib import Path
+import frontmatter
+
+root = (
+Path(sys.argv[1])
+if len(sys.argv) > 1
+else Path(
+os.environ.get("CODEX_SKILLS_DIR", str(Path.home() / ".config/codex/skills"))
+)
+)
+if not root.exists():
+print(f"missing skills dir: {root}", file=sys.stderr)
+sys.exit(1)
+
+skills = []
+for f in sorted(root.rglob("SKILL.md")):
+meta = (frontmatter.load(f).metadata) or {}
+n, d = meta.get("name"), meta.get("description")
+if isinstance(n, str) and isinstance(d, str):
+item = {"name": n, "description": d, "path": str(f)}
+if "allowed-tools" in meta:
+item["allowed-tools"] = meta["allowed-tools"]
+skills.append(item)
+skills.sort(key=lambda s: s["name"])
+json.dump(skills, sys.stdout, ensure_ascii=False, indent=2)Skills
+
 Skills are folders of instructions, scripts, and resources that Claude loads dynamically to improve performance on specialized tasks. Skills teach Claude how to complete specific tasks in a repeatable way, whether that's creating documents with your company's brand guidelines, analyzing data using your organization's specific workflows, or automating personal tasks.
 
 For more information, check out:
+
 - [What are skills?](https://support.claude.com/en/articles/12512176-what-are-skills)
 - [Using skills in Claude](https://support.claude.com/en/articles/12512180-using-skills-in-claude)
 - [How to create custom skills](https://support.claude.com/en/articles/12512198-creating-custom-skills)
@@ -26,21 +59,25 @@ The example skills in this repo are open source (Apache 2.0). We've also include
 This repository includes a diverse collection of example skills demonstrating different capabilities:
 
 ## Creative & Design
+
 - **algorithmic-art** - Create generative art using p5.js with seeded randomness, flow fields, and particle systems
 - **canvas-design** - Design beautiful visual art in .png and .pdf formats using design philosophies
 - **slack-gif-creator** - Create animated GIFs optimized for Slack's size constraints
 
 ## Development & Technical
+
 - **artifacts-builder** - Build complex claude.ai HTML artifacts using React, Tailwind CSS, and shadcn/ui components
 - **mcp-server** - Guide for creating high-quality MCP servers to integrate external APIs and services
 - **webapp-testing** - Test local web applications using Playwright for UI verification and debugging
 
 ## Enterprise & Communication
+
 - **brand-guidelines** - Apply Anthropic's official brand colors and typography to artifacts
 - **internal-comms** - Write internal communications like status reports, newsletters, and FAQs
 - **theme-factory** - Style artifacts with 10 pre-set professional themes or generate custom themes on-the-fly
 
 ## Meta Skills
+
 - **skill-creator** - Guide for creating effective skills that extend Claude's capabilities
 - **template-skill** - A basic template to use as a starting point for new skills
 
@@ -58,18 +95,22 @@ The `document-skills/` subdirectory contains skills that Anthropic developed to 
 # Try in Claude Code, Claude.ai, and the API
 
 ## Claude Code
+
 You can register this repository as a Claude Code Plugin marketplace by running the following command in Claude Code:
+
 ```
 /plugin marketplace add anthropics/skills
 ```
 
 Then, to install a specific set of skills:
+
 1. Select `Browse and install plugins`
 2. Select `anthropic-agent-skills`
 3. Select `document-skills` or `example-skills`
 4. Select `Install now`
 
 Alternatively, directly install either Plugin via:
+
 ```
 /plugin install document-skills@anthropic-agent-skills
 /plugin install example-skills@anthropic-agent-skills
@@ -79,7 +120,7 @@ After installing the plugin, you can use the skill by just mentioning it. For in
 
 ## Claude.ai
 
-These example skills are all already available to paid plans in Claude.ai. 
+These example skills are all already available to paid plans in Claude.ai.
 
 To use any skill from this repository or upload custom skills, follow the instructions in [Using skills in Claude](https://support.claude.com/en/articles/12512180-using-skills-in-claude#h_a4222fa77b).
 
@@ -111,6 +152,7 @@ description: A clear description of what this skill does and when to use it
 ```
 
 The frontmatter requires only two fields:
+
 - `name` - A unique identifier for your skill (lowercase, hyphens for spaces)
 - `description` - A complete description of what the skill does and when to use it
 
@@ -121,3 +163,55 @@ The markdown content below contains the instructions, examples, and guidelines t
 Skills are a great way to teach Claude how to get better at using specific pieces of software. As we see awesome example skills from partners, we may highlight some of them here:
 
 - **Notion** - [Notion Skills for Claude](https://www.notion.so/notiondevs/Notion-Skills-for-Claude-28da4445d27180c7af1df7d8615723d0)
+
+# Codex Integration (WSL)
+
+Integration from - [https://www.robert-glaser.de/claude-skills-in-codex-cli/](https://www.robert-glaser.de/claude-skills-in-codex-cli/)
+
+1. Clone repo
+2. Set CODEX_SKILLS_DIR=cloned_repo_path (update your bash profile)
+3. Create/Update .codex/Agents.md adding in
+
+   ```##
+   You’ve got skills.
+   - List your skills directly after reading this via `list-skills` (uses `$CODEX_SKILLS_DIR`). Remember them.
+   - If a skill matches a certain task at hand, only then read its full documentation (`SKILL.md`) and use it.
+
+   ```
+4. Create list-skills (~/bin/list-skills)
+
+   ```#!/usr/bin/env
+   # /// script
+   # requires-python = ">=3.8"
+   # dependencies = ["python-frontmatter","pyyaml"]
+   # ///
+   import os, sys, json
+   from pathlib import Path
+   import frontmatter
+
+   root = (
+       Path(sys.argv[1])
+       if len(sys.argv) > 1
+       else Path(
+           os.environ.get("CODEX_SKILLS_DIR", str(Path.home() / ".config/codex/skills"))
+       )
+   )
+   if not root.exists():
+       print(f"missing skills dir: {root}", file=sys.stderr)
+       sys.exit(1)
+
+   skills = []
+   for f in sorted(root.rglob("SKILL.md")):
+       meta = (frontmatter.load(f).metadata) or {}
+       n, d = meta.get("name"), meta.get("description")
+       if isinstance(n, str) and isinstance(d, str):
+           item = {"name": n, "description": d, "path": str(f)}
+           if "allowed-tools" in meta:
+               item["allowed-tools"] = meta["allowed-tools"]
+           skills.append(item)
+   skills.sort(key=lambda s: s["name"])
+   json.dump(skills, sys.stdout, ensure_ascii=False, indent=2)
+
+   ```
+5. Add list-skills file to path `PATH="~/bin/list-skills:$PATH"`
+6. Set the UV_PROJECT_ENIRONMENT to avoid misconfiguration with IDE interpreters not running on WSL `export UV_PROJECT_ENVIRONMENT=".uv-env"`
